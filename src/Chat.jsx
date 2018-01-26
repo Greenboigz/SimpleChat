@@ -1,61 +1,61 @@
 import React, { Component } from 'react';
-import { Panel, FormControl } from 'react-bootstrap';
+import { Panel, FormControl, Button } from 'react-bootstrap';
+import { Editor } from 'react-draft-wysiwyg';
+import { EditorState, convertToRaw, convertFromRaw, ContentState } from 'draft-js';
+import draftToHtml from 'draftjs-to-html';
+import 'react-draft-wysiwyg/dist/react-draft-wysiwyg.css';
 import Message from './Message.jsx';
 import ReactDOM from 'react-dom';
 import mqtt from 'mqtt';
 
 class Chat extends Component {
 
-  constructor({ chatname, name, props }) {
+  constructor({ chatname, username, iconUrl, props }) {
     super(props);
-
-    this.client  = mqtt.connect('ws://test.mosquitto.org:8080/mqtt')
-
-    var self = this;
-
-    self.client.on('connect', function () {
-      self.client.subscribe('chat');
-      self.setState({loading: false});
-    })
-
-    self.client.on('message', function (topic, message) {
-      self.addMessage(JSON.parse(message.toString()));
-    })
 
     this.state = {
       loading: true,
       chatname: chatname,
-      username: name,
-      curMessage: "",
-      messages: [
-        {
-          name: "Sam Greenberg",
-          body: "Hello?",
-          timestamp: Date.now() - 10000
-        },
-        {
-          name: "Tom Ficcadenti",
-          body: "Hey, what's good friend?",
-          timestamp: Date.now() - 5000
-        },
-        {
-          name: "Sam Greenberg",
-          body: "I just got this thing working, so everything!",
-          timestamp: Date.now()
-        },
-      ]
+      username: username,
+      iconUrl: iconUrl,
+      editorState: EditorState.createEmpty(),
+      messages: []
     }
+  }
+
+  componentWillMount() {
+      this.client  = mqtt.connect('ws://mqtt.bucknell.edu:9001');
+
+      console.log("Connecting");
+      let self = this;
+
+      this.client.on('connect', function () {
+        self.client.subscribe(`root${window.location.pathname}/#`);
+        self.setState({loading: false});
+      })
+
+      self.client.on('message', function (topic, message) {
+        message = JSON.parse(message.toString());
+        message.username = topic.split('/')[2];
+        self.addMessage(message);
+      })
+  }
+
+  componentWillUnmount() {
+    // this.client.close();
   }
 
   componentWillReceiveProps(nextProps) {
     this.setState({
-      username: nextProps.name
+      username: nextProps.username,
+      iconUrl: nextProps.iconUrl
     });
   }
 
-  setCurMessage(message) {
-    if (message !== "\n")
-      this.setState({curMessage: message});
+  setMessage(message) {
+    if (message !== "\n") {
+      this.setState({message: message});
+    }
   }
 
   handleKeyDown(event) {
@@ -65,23 +65,33 @@ class Chat extends Component {
   }
 
   sendMessage() {
-    if (this.state.curMessage !== "") {
-      // let messages = [...this.state.messages];
+    if (this.state.message !== "") {
+
       const newMessage = {
-        "name": this.state.username,
-        "body": this.state.curMessage,
-        "timestamp": Date.now()
+        "iconUrl": this.state.iconUrl,
+        "message": draftToHtml(convertToRaw(this.state.editorState.getCurrentContent())),
+        "clientTime": Date.now()
       };
 
-      this.client.publish('chat', JSON.stringify(newMessage));
+      this.client.publish(`root${window.location.pathname}/${this.state.username}`, JSON.stringify(newMessage));
 
-      this.setState({curMessage: ""});
+      this.setState({editorState: EditorState.createEmpty()});
     }
   }
 
   addMessage(message) {
     let messages = [...this.state.messages];
-    messages.push(message);
+
+    console.log(message.message);
+
+    // Will update the most recent message if the new message is from the same
+    // user and the message was received within 60 seconds of the previous
+    if (messages.length > 0 && messages[messages.length - 1].username === message.username && (message.clientTime - messages[messages.length - 1].clientTime < 60000)) {
+      messages[messages.length - 1].message += message.message;
+      messages[messages.length - 1].clientTime = message.clientTime;
+    } else {
+      messages.push(message);
+    }
     this.setState({messages});
   }
 
@@ -110,24 +120,34 @@ class Chat extends Component {
   }
 
   render() {
+    // console.log(JSON.stringify(this.state.editorState._immutable.currentContent.blockMap));
     return (
       <Panel bsStyle="primary" style={{ width: "100%", maxWidth: 800, height:"100%"}}>
         <Panel.Heading>
           <h2>{this.state.chatname}</h2>
         </Panel.Heading>
         <Panel.Body className="scrollable" style={{ height: 300 }}>
-          { this.state.messages.map((message, i) => { return <Message message={message} align={this.getAlign(message.name)} key={i} ref={(ref) => this['_div' + i] = ref} />; }) }
+          {
+            this.state.messages.map((message, i) => {
+              return (
+                <Message message={message} align={this.getAlign(message.username)}
+                  key={i} ref={(ref) => this['_div' + i] = ref} iconUrl={this.state.iconUrl} />
+              );
+            })
+          }
         </Panel.Body>
         <Panel.Footer>
-          <FormControl componentClass="textarea"
-            className="messages"
+          <Editor
             disabled={this.state.loading}
-            onChange={(event) => {this.setCurMessage(event.target.value)}}
-            onKeyDown={(event) => {this.handleKeyDown(event)}}
-            onSubmit={() => {this.sendMessage()}}
-            value={this.state.curMessage}
-            style={{ height: 100 }}
-            placeholder="Write a message here" />
+            editorState={this.state.editorState}
+            wrapperClassName="wrapper-class"
+            editorClassName="form-control messages"
+            toolbarClassName="toolbar-class"
+            onEditorStateChange={(editorState) => {this.setState({editorState: editorState})}}
+            />
+          <div className="right" style={{paddingTop: 10}}>
+            <Button bsStyle="primary" bsSize="large" onClick={() => this.sendMessage()}>Submit</Button>
+          </div>
         </Panel.Footer>
       </Panel>
     );

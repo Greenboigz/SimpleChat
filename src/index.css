@@ -27,15 +27,22 @@ body {
 .left {
   width: 100%;
   text-align: left;
+  vertical-align: top;
 }
 
 .right {
   width: 100%;
   text-align: right;
+  vertical-align: top;
+}
+
+.left img, .right img {
+  vertical-align: top;
 }
 
 .scrollable {
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .scrollable::-webkit-scrollbar-track
@@ -62,10 +69,22 @@ body {
   margin-bottom: 5px;
   display: inline-block;
 }
-
+/*
 .messages {
   resize: none;
   font-size: 13px !important;
+  overflow-x: hidden;
+  overflow-y: auto;
+} */
+
+.messages {
+  height: 150px !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
+.messages div {
+  height: auto !important;
 }
 
 .message .panel-heading {
@@ -79,6 +98,28 @@ body {
   white-space: pre-line;
 }
 
+.left img, .right img, .left div, .right div {
+  display: inline-block;
+}
+
+.message {
+  display: inline-block;
+  width: wrap-content;
+  max-width: 80%;
+}
+
+.message>div {
+  display: block;
+}
+
+.message-left {
+  margin-left: 5px;
+}
+
+.message-right {
+  margin-right: 5px;
+}
+
 .message-left .panel-heading, .message-left .panel-body {
   text-align: left !important;
 }
@@ -87,6 +128,23 @@ body {
   text-align: right !important;
 }
 
+.panel-body {
+  padding: 5px;
+}
+
+.panel-body p {
+  margin: 0;
+}
+
 .modal-dialog {
   margin-top: 100px !important;
+}
+
+.img-circle {
+    border-radius: 50%;
+}
+
+.rdw-option-wrapper, .rdw-editor-toolbar, .rdw-block-dropdown, .rdw-fontsize-dropdown, .rdw-fontfamily-dropdown {
+  border-color: lightgray !important;
+  border-radius: 3.5px !important;
 }

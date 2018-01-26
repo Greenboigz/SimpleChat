@@ -8,27 +8,83 @@ class App extends Component {
   constructor(props) {
     super(props);
 
+    this.handleNameChange = this.handleNameChange.bind(this);
+    this.handleIconChange = this.handleIconChange.bind(this);
+    this.handleClose = this.handleClose.bind(this);
+
+    const self = this;
+
     this.state = {
-      name: "",
+      username: localStorage.username || "",
+      iconUrl: localStorage.iconUrl || "",
+      iconValidState: (localStorage.iconUrl) ? "loading" : "",
       show: true
     }
+    testImage(localStorage.iconUrl)
+      .then((result) => {
+        self.setState({
+          iconValidState: "success"
+        })
+      })
+      .catch((error) => {
+        self.setState({
+          iconValidState: "error"
+        })
+      });
   }
 
-  handleChange(event) {
+  handleNameChange(event) {
     this.setState({
-      name: event.target.value
+      username: event.target.value
     });
   }
 
-  getValidationState() {
-    const length = this.state.name.length;
+  handleIconChange(event) {
+    const self = this;
+    testImage(event.target.value)
+      .then((result) => {
+        self.setState({
+          iconValidState: "success"
+        })
+      })
+      .catch((error) => {
+        self.setState({
+          iconValidState: "error"
+        })
+      });
+    this.setState({
+      iconUrl: event.target.value,
+      iconValidState: "loading"
+    });
+  }
+
+  getNameValidationState() {
+    const length = this.state.username.length;
 		if (length > 10) return 'success';
 		else if (length > 5) return 'warning';
 		else if (length > 0) return 'error';
 		return null;
   }
 
-  handleClose() {
+  getIconValidationState() {
+    const iconValidState = this.state.iconValidState;
+    if (iconValidState === 'timeout') return 'error';
+    else if (iconValidState === 'loading') return 'warning'
+		else return iconValidState;
+  }
+
+  isValid() {
+    if ((this.getNameValidationState() === 'success' || this.getNameValidationState() === 'warning') && this.getIconValidationState() === 'success') {
+      return true
+    } else return false;
+  }
+
+  handleClose(event) {
+    event.preventDefault();
+
+    localStorage.username = this.state.username;
+    localStorage.iconUrl = this.state.iconUrl;
+
     this.setState({
       show: false
     });
@@ -38,30 +94,59 @@ class App extends Component {
     return (
       <div className="App">
         <Modal show={this.state.show}>
-          <form onSubmit={(event) => { event.preventDefault(); this.handleClose(); }}>
+          <form onSubmit={this.handleClose}>
             <Modal.Header>
-              <Modal.Title>What's Your Name</Modal.Title>
+              <Modal.Title>What's Your Name?</Modal.Title>
             </Modal.Header>
             <Modal.Body>
-      				<FormGroup controlId="formBasicText" validationState={this.getValidationState()}>
-      					<ControlLabel>Working example with validation</ControlLabel>
-      					<FormControl type="text" value={this.state.name} placeholder="Enter text" onChange={(event) => { this.handleChange(event) }} />
+      				<FormGroup controlId="userusername" validationState={this.getNameValidationState()}>
+      					<ControlLabel>Enter your username below</ControlLabel>
+      					<FormControl type="text" value={this.state.username} placeholder="Barack Obama" onChange={ this.handleNameChange } />
       					<FormControl.Feedback />
-      					<HelpBlock>Validation is based on string length.</HelpBlock>
+      					<HelpBlock>Names must be longer than 5 characters.</HelpBlock>
+      				</FormGroup>
+              <FormGroup controlId="iconUrl" validationState={this.getIconValidationState()}>
+      					<ControlLabel>Give yourself an icon</ControlLabel>
+      					<FormControl type="text" value={this.state.iconUrl} placeholder="http://simpleicon.com/wp-content/uploads/smile.png"
+                  onChange={this.handleIconChange} />
+      					<FormControl.Feedback />
+      					<HelpBlock>The link must be of an image.</HelpBlock>
       				</FormGroup>
             </Modal.Body>
             <Modal.Footer>
-              <Button type="submit" disabled={this.getValidationState() !== "warning" && this.getValidationState() !== "success"}>Submit</Button>
+              <Button type="submit" disabled={!this.isValid()}>Submit</Button>
             </Modal.Footer>
           </form>
         </Modal>
         <div className="center" style={{ padding: 20, height: "100%" }}>
-          <Chat chatname="My Favorite Chat Party" name={this.state.name} />
+          <Chat chatname={window.location.pathname.split('/')[1]} username={this.state.username} iconUrl={this.state.iconUrl} />
         </div>
       </div>
     );
   }
 
+}
+
+function testImage(url, timeoutT) {
+  return new Promise(function (resolve, reject) {
+    var timeout = timeoutT || 5000;
+    var timer, img = new Image();
+    img.onerror = img.onabort = function () {
+      clearTimeout(timer);
+      reject("error");
+    };
+    img.onload = function () {
+      clearTimeout(timer);
+      resolve("success");
+    };
+    timer = setTimeout(function () {
+      // reset .src to invalid URL so it stops previous
+      // loading, but doesn't trigger new load
+      img.src = "//!!!!/test.jpg";
+      reject("timeout");
+    }, timeout);
+    img.src = url;
+  });
 }
 
 export default App;

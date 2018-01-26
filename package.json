@@ -4,13 +4,21 @@
   "private": true,
   "dependencies": {
     "bootstrap": "^4.0.0",
+    "browserify": "^15.2.0",
     "dateformat": "^3.0.2",
+    "draft-js": "^0.10.5",
+    "draftjs-to-html": "^0.8.2",
+    "html-react-parser": "^0.4.1",
     "mosca": "^2.7.0",
     "mqtt": "^2.15.1",
     "mqtt-react": "0.0.3",
     "react": "^16.2.0",
     "react-bootstrap": "^0.32.0",
     "react-dom": "^16.2.0",
+    "react-draft-wysiwyg": "^1.12.6",
+    "react-emoji": "^0.5.0",
+    "react-emoji-render": "^0.4.4",
+    "react-quill": "^1.2.3",
     "react-scripts": "1.1.0"
   },
   "scripts": {
